@@ -1,0 +1,32 @@
+{
+  "name": "pdftest",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "nodemon ./bin/www"
+  },
+  "dependencies": {
+    "async": "^2.6.1",
+    "body-parser": "^1.18.3",
+    "connect-multiparty": "^2.1.1",
+    "cookie-parser": "~1.4.3",
+    "csv": "^5.1.1",
+    "debug": "~2.6.9",
+    "ejs": "~2.5.7",
+    "express": "~4.16.0",
+    "express-myconnection": "^1.0.4",
+    "html-pdf": "^2.2.0",
+    "http-errors": "~1.6.2",
+    "json-stringify": "^1.0.0",
+    "moment": "^2.22.2",
+    "morgan": "~1.9.0",
+    "node-pdftotext": "^1.0.4",
+    "nodemon": "^1.18.3",
+    "pdf-to-text": "0.0.7",
+    "promise-mysql": "^3.3.1",
+    "read-excel-file": "^2.0.2",
+    "s": "^0.1.1",
+    "sequelize": "^5.5.0",
+    "tedious": "^6.1.0"
+  }
+}
