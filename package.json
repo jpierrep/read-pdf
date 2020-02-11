@@ -8,6 +8,7 @@
   "dependencies": {
     "async": "^2.6.1",
     "body-parser": "^1.18.3",
+    "child-process": "^1.0.2",
     "connect-multiparty": "^2.1.1",
     "cookie-parser": "~1.4.3",
     "csv": "^5.1.1",
