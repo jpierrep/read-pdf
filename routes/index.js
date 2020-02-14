@@ -13,6 +13,7 @@ var exec=require('child_process').exec
 var execSync=require('child_process').execSync
 const constants = require('../config/system_constants')
 var sql = require('../config/connections')
+var fs=require('fs');
 
 let empresa=0
 let empresaDetalle = constants.EMPRESAS.find(x => x.ID == empresa).BD_SOFTLAND
@@ -30,6 +31,7 @@ var rutsFiltrar=['79.960.660-7']
 
 var pdf_path = "CotizacionesPersonal.pdf";
 var pdf_name="CotizacionesPersonal.pdf"
+var path_output_base="pdfFiles/"
 //var regex="\d{1,2}\.\d{3}\.\d{3}[\-][0-9kK]{1}"
 //identificador g devuelve array con todos los emparejamientos
 //identificador i devuelve array con informacion de los emparejamientos
@@ -104,9 +106,9 @@ and ep.FechaMes=(select max(FechaMes) from GUARD.softland.sw_vsnpRetornaFechaMes
   */
 
 
- console.log("hola")
   //option to extract text from page 0 to 10
-  var option = {from: 0, to: 19};
+ // var option = {from: 0, to: 19};
+ var option=null
    
   pdfUtil.pdfToText(pdf_path, option, function(err, data) {
     if (err) throw(err);
@@ -116,13 +118,20 @@ and ep.FechaMes=(select max(FechaMes) from GUARD.softland.sw_vsnpRetornaFechaMes
     //rutsencontrados [ '8.849.245-5', '13.510.579-1', '10.420.224-1', '8.223.485-3' ]
     //console.log(data)
     //console.log(data); //print text    
-
-   let cadena = "Para más información, vea Capítulo 3.4.5.1";
+  let cadena = "Para más información, vea Capítulo 3.4.5.1";
 let expresion = /(capítulo \d+(\.\d)*)/i;
 let hallado = cadena.match(expresion);
 
 console.log('hallado: ',hallado);
 
+
+var filePath = ''; 
+var fileName='personalNoExiste.log';
+var filePathName=filePath+fileName
+if (fs.existsSync(filePathName)){
+    fs.unlinkSync(filePathName);
+    console.log("se elimino el archivo log")
+}
 
 
 //segun los ruts incluidos en el archivo (ruts encontrados armar json) encontrar todas las fichas activas asociada al rut 
@@ -137,6 +146,7 @@ let tablaMapPersonas=[
 
 tablaMapPersonas=[]
 
+
 rutsEncontrados.forEach((rutEncontrado,index)=>{
 let pagina=index+1
 let rutId=convierteRutID(rutEncontrado)
@@ -146,24 +156,29 @@ if(registrosPersona){
 
     registrosPersona.forEach(registroPersona=>{
        if(!(tablaMapPersonas.find(x=>x["RUT_ID"]==registroPersona["RUT_ID"]&&x["CENCO2_CODI"]==registroPersona["CENCO2_CODI"]))){
+
         tablaMapPersonas.push({RUT:registroPersona["RUT"],RUT_ID:registroPersona["RUT_ID"],PAGINA:pagina,FICHA:registroPersona["FICHA"],CENCO2_CODI:registroPersona["CENCO2_CODI"]})
-       }else{
+      
+    }else{
            console.log("el registro ya tiene la persona ",rutId,"el el centro costo",registroPersona["CENCO2_CODI"])
        }
    })
 
-
 }else{
   console.log("no se encuentra vigente la persona de rut: "+rutEncontrado)
     //no se encuentra la persona en softland entregar error
-}
+   
+    fs.appendFile(filePathName,rutEncontrado+'\n', function (err) {
+        if (err) throw err;
+        console.log('Saved!');
+      });
 
+}
 
 })
  
 
-
-  console.log(tablaMapPersonas)
+// console.log(tablaMapPersonas)
 
 
 //get rut_id function
@@ -180,15 +195,13 @@ console.log("distinct cc",distinctCC)
 
 
 
-
-
 distinctCC.forEach(cc=>{
     console.log("Empezando el ..."+cc)
 
     let pagesCC=tablaMapPersonas.filter(x=>x["CENCO2_CODI"]==cc).map(x=>x["PAGINA"]).join(" ")
     console.log("pagesCC",pagesCC)
   
-    let child = exec('pdftk ' +pdf_name +' cat '+pagesCC+' output '+cc+'.pdf',
+    let child = exec('pdftk ' +pdf_name +' cat '+pagesCC+' output '+path_output_base+cc+'.pdf',
     function (error, stdout, stderr) {
       console.log('stdout: ' + stdout);
       console.log('stderr: ' + stderr);
@@ -242,7 +255,7 @@ function convierteRutID(rut) {
       rut = 0;
   
   
-    console.log("el rut es:" + rut);
+ //   console.log("el rut es:" + rut);
     return rut;
   }
 
