@@ -14,6 +14,9 @@ var execSync=require('child_process').execSync
 const constants = require('../config/system_constants')
 var sql = require('../config/connections')
 var fs=require('fs');
+var formidable = require('formidable');
+var utils=require('../controllers/utils')
+
 
 let empresa=0
 let empresaDetalle = constants.EMPRESAS.find(x => x.ID == empresa).BD_SOFTLAND
@@ -41,14 +44,123 @@ var regex=/\d{1,2}\.\d{3}\.\d{3}[\-][0-9kK]{1}/g
 
 
 
+router.post('/fileupload', async function(req, res, next) {
+  console.log("en fileup")
+  var form = new formidable.IncomingForm();
+  form.parse(req, async function (err, fields, files) {
 
-router.get('/', async function(req, res, next) {
+    var oldpath = files.filetoupload.path;
+    // var newpath = 'C:/Users/jpierre/Desktop/' + files.filetoupload.name;
+    var newpath =  files.filetoupload.name;
+ 
+  let rutsEncontrados=await getRutsOfFile(oldpath)
+  console.log("ruts",rutsEncontrados)
+  //solo si encuentra ruts, si no, mostrar error
+
+
+  let fechaHora=new Date().toISOString().slice(0, 19).replace('T', ' ').replace(/ /g, "-").replace(/:/g, "-");
+  console.log(fechaHora)
+
+
+//se respalda el archivo anterior
+  fs.copyFile(pdf_path, 'respaldo_file_uploads/'+fechaHora+pdf_path, function (err) {
+    if (err) throw err;
+ 
+    //se carga el archivo actual
+    fs.rename(oldpath, pdf_path, async function (err) {
+      if (err) throw err;
+      await generaFiles(rutsEncontrados)
+      res.write('File uploaded and moved!');
+      res.end();
+    });
+
+
+    //res.write('File uploaded and moved!');
+    //res.end();
+  });
+
+
+
+
+   
+
+
+
+   console.log("new",newpath)
+    console.log("old",oldpath)
+/*
+    fs.rename(oldpath, newpath, function (err) {
+      if (err) throw err;
+      res.write('File uploaded and moved!');
+      res.end();
+    });
+
+    */
+});
+
+})
+
+
+
+
+
+
+ function getRutsOfFile(pdf_path){
+
+  return new Promise(resolve=>{ 
+  
+    let option=null
+    pdfUtil.pdfToText(pdf_path, option, function(err, data) {
+      if (err) throw(err);
+      //rut filtrados sin el de empresa
+     let rutsEncontrados= data.match(regex).filter(x=>!rutsFiltrar.includes(x));
+      console.log("rutsencontrados",rutsEncontrados)
+      //rutsencontrados [ '8.849.245-5', '13.510.579-1', '10.420.224-1', '8.223.485-3' ]
+      //console.log(data)
+      //console.log(data); //print text    
+    let cadena = "Para más información, vea Capítulo 3.4.5.1";
+  let expresion = /(capítulo \d+(\.\d)*)/i;
+  let hallado = cadena.match(expresion);
+  
+  console.log('hallado: ',hallado);
+  
+  resolve(rutsEncontrados)
+   
+})
+  
+
+
+
+    
+  })
+
+
+
+
+
+
+}
+
+
+
+
+router.get('/cargarArchivoPrevired', async function(req, res, next) {
+
+console.log("acaaaaa")
+res.render('index', { title: 'Compilación Archivos Previred'});
+
+
+})
+
+
+
+
+router.get('/a', async function(req, res, next) {
 
 
  var personalVigente=(await sql.query(
 `
 
- 
 select 
  
 LTRIM(RTRIM(per.ficha)) AS 'FICHA', per.codBancoSuc as 'BANCO_CODI', per.nombres as 'NOMBRES', per.rut as 'RUT', per.direccion as 'DIRECCION', per.codComuna as 'COMUNA_CODI', 
@@ -107,8 +219,9 @@ and ep.FechaMes=(select max(FechaMes) from GUARD.softland.sw_vsnpRetornaFechaMes
 
 
   //option to extract text from page 0 to 10
- // var option = {from: 0, to: 19};
- var option=null
+  var option=null
+   //var option = {from: 0, to: 19};
+
    
   pdfUtil.pdfToText(pdf_path, option, function(err, data) {
     if (err) throw(err);
@@ -201,7 +314,7 @@ distinctCC.forEach(cc=>{
     let pagesCC=tablaMapPersonas.filter(x=>x["CENCO2_CODI"]==cc).map(x=>x["PAGINA"]).join(" ")
     console.log("pagesCC",pagesCC)
   
-    let child = exec('pdftk ' +pdf_name +' cat '+pagesCC+' output '+path_output_base+cc+'.pdf',
+    let child = execSync('pdftk ' +pdf_name +' cat '+pagesCC+' output '+path_output_base+cc+'.pdf',
     function (error, stdout, stderr) {
       console.log('stdout: ' + stdout);
       console.log('stderr: ' + stderr);
@@ -223,6 +336,7 @@ console.log("terminado")
 
 
 });
+
    
 
 
@@ -243,6 +357,8 @@ pdftotext(options, err => {
 
   res.render('index', { title: 'Express' });
 });
+
+
 
 
 function convierteRutID(rut) {
@@ -266,6 +382,165 @@ function convierteRutID(rut) {
     return replaceAll(prevstring, omit, place, string)
   }
   
+
+
+   async function generaFiles(rutsEncontrados){
+
+    return new Promise(async resolve=>{ 
+
+    var personalVigente=(await sql.query(
+      `
+      
+      select 
+       
+      LTRIM(RTRIM(per.ficha)) AS 'FICHA', per.codBancoSuc as 'BANCO_CODI', per.nombres as 'NOMBRES', per.rut as 'RUT', per.direccion as 'DIRECCION', per.codComuna as 'COMUNA_CODI', 
+      
+      per.codCiudad as 'CIUDAD_CODI', per.telefono1 as 'TELEFONO1', per.telefono2 as 'TELEFONO2', per.telefono3 as 'TELEFONO3', 
+                      per.fechaNacimient   as 'FECHA_NACIMIENTO', DATEDIFF(YEAR,per.fechaNacimient,GETDATE())
+      -(CASE
+      WHEN DATEADD(YY,DATEDIFF(YEAR,per.fechaNacimient,GETDATE()),per.fechaNacimient)>GETDATE() THEN
+        1
+      ELSE
+        0 
+      END)as 'EDAD',per.sexo as 'SEXO', per.estadoCivil as 'ESTADO CIVIL', per.nacionalidad as 'NACIONALIDAD', per.situacionMilit as 'SITUACION MILITAR',per.fechaIngreso as 'FECHA_INGRESO',per.fechaPrimerCon as 'FECHA_PRIMER_CONTR',per.fechaContratoV as 'FECHA_CONTRATO_VIGENTE' ,per.fechaFiniquito as FECHA_FINIQUITO, 
+                           per.tipoPago as 'TIPO_PAGO',per.FecCalVac as 'FECHA_CALCULO_VAC',per.FecTermContrato  as 'FECHA_TERM_CONTRATO', ccp.codiCC AS 'CENCO2_CODI', cp.carCod as 'CARGO_CODI',c.CarNom as 'CARGO_DESC', CAST(ep.FechaMes AS Date) as 'FECHA_SOFT'
+                           , ep.IndiceMes as 'INDICE_MES_SOFT', ep.Estado as 'ESTADO', 0 AS EMP_CODI
+                    
+      ,case when ISNUMERIC (replace(substring(RUT,1,len(RUT)-2),'.',''))=1 then CONVERT(int,replace(substring(RUT,1,len(RUT)-2),'.','')) else 0 end as RUT_ID from 
+      
+      GUARD.softland.sw_vsnpEstadoPer as ep INNER JOIN
+      GUARD.softland.sw_personal AS per 
+      on ep.Ficha = per.ficha INNER JOIN
+      GUARD.softland.sw_cargoper AS cp ON cp.ficha = ep.Ficha AND cp.vigHasta = '9999-12-01' inner join
+      GUARD.softland.cwtcarg AS c ON c.CarCod = cp.carCod inner join
+      GUARD.softland.sw_ccostoper AS ccp ON ccp.ficha = per.ficha AND ccp.vigHasta = '9999-12-01' 
+      where estado='V'
+      and ep.FechaMes=(select max(FechaMes) from GUARD.softland.sw_vsnpRetornaFechaMesExistentes)
+      
+      
+                               `
+      
+       )).recordset
+      
+      
+        //option to extract text from page 0 to 10
+        var option=null
+         //var option = {from: 0, to: 19};
+      
+         
+      
+      var filePath = ''; 
+      var fileName='personalNoExiste.log';
+      var filePathName=filePath+fileName
+      if (fs.existsSync(filePathName)){
+          fs.unlinkSync(filePathName);
+          console.log("se elimino el archivo log")
+      }
+      
+      
+      //segun los ruts incluidos en el archivo (ruts encontrados armar json) encontrar todas las fichas activas asociada al rut 
+      //y con ellas los centros costo correspondientes
+      let tablaMapPersonas=[
+          {RUT:'8.849.245-5',PAGINA:1,FICHA:'ASDAS12',CENCO2_CODI:'027-001'},
+          {RUT:'8.849.245-6',PAGINA:4,FICHA:'ASDAS12',CENCO2_CODI:'027-001'},
+          {RUT:'8.849.245-5',PAGINA:15,FICHA:'ASDAS12',CENCO2_CODI:'027-001'},
+          {RUT:'8.849.245-5',PAGINA:7,FICHA:'ASDAS12',CENCO2_CODI:'028-001'},
+          ]
+          
+      
+      tablaMapPersonas=[]
+      
+      
+      rutsEncontrados.forEach((rutEncontrado,index)=>{
+      let pagina=index+1
+      let rutId=convierteRutID(rutEncontrado)
+      //puede tener mas de una ficha vigente
+      let registrosPersona=personalVigente.filter(x=>x["RUT_ID"]==rutId)
+      if(registrosPersona){
+      
+          registrosPersona.forEach(registroPersona=>{
+             if(!(tablaMapPersonas.find(x=>x["RUT_ID"]==registroPersona["RUT_ID"]&&x["CENCO2_CODI"]==registroPersona["CENCO2_CODI"]))){
+      
+              tablaMapPersonas.push({RUT:registroPersona["RUT"],RUT_ID:registroPersona["RUT_ID"],PAGINA:pagina,FICHA:registroPersona["FICHA"],CENCO2_CODI:registroPersona["CENCO2_CODI"]})
+            
+          }else{
+                 console.log("el registro ya tiene la persona ",rutId,"el el centro costo",registroPersona["CENCO2_CODI"])
+             }
+         })
+      
+      }else{
+        console.log("no se encuentra vigente la persona de rut: "+rutEncontrado)
+          //no se encuentra la persona en softland entregar error
+         
+          fs.appendFile(filePathName,rutEncontrado+'\n', function (err) {
+              if (err) throw err;
+              console.log('Saved!');
+            });
+      
+      }
+      
+      })
+       
+      
+      // console.log(tablaMapPersonas)
+      
+      
+      //get rut_id function
+      
+      let unique = (value, index, self) => {
+      
+          return self.indexOf(value) == index;
+        }
+      
+        let distinctCC=['027-001','028-001']
+         distinctCC = tablaMapPersonas.map(x=>x["CENCO2_CODI"]).filter(unique);
+      
+      console.log("distinct cc",distinctCC)
+      
+      
+      
+      distinctCC.forEach(cc=>{
+          console.log("Empezando el ..."+cc)
+      
+          let pagesCC=tablaMapPersonas.filter(x=>x["CENCO2_CODI"]==cc).map(x=>x["PAGINA"]).join(" ")
+          console.log("pagesCC",pagesCC)
+        
+          let child = execSync('pdftk ' +pdf_name +' cat '+pagesCC+' output '+path_output_base+cc+'.pdf',
+          function (error, stdout, stderr) {
+            console.log('stdout: ' + stdout);
+            console.log('stderr: ' + stderr);
+            console.log("terminado el cc "+cc)
+      
+            if (error !== null) {
+              console.log('exec error: ' + error);
+             
+            }
+          });
+          
+           
+      })
+      
+      console.log("terminado")
+      resolve()
+      
+      
+      
+      
+      
+     
+      
+         
+      
+      
+      
+    
+
+
+    })
+   }
+
+
+
   
 
 module.exports = router;

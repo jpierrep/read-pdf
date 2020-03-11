@@ -1,0 +1,149 @@
+----
+validar desde softland
+
+select sum(variable_monto) from
+(
+
+SELECT        ccp.codiCC AS 'CENCO2_CODI', LTRIM(RTRIM(vp.ficha)) AS 'FICHA', cp.carCod as 'CARGO_CODI', c.CarNom as CARGO_DESC, cast(vfm.FechaMes AS Date) AS FECHA, vp.mes AS MES_SOFT, 
+                         vp.codVariable as 'VARIABLE_CODI', CAST(vp.valor AS float) AS 'VARIABLE_MONTO', ep.Estado as 'ESTADO_PER', v.descripcion AS 'VARIABLE_DESC', area.codArn AS AREA_CODI, 
+                         '0X'+vp.ficha + 'X' + CAST(ep.IndiceMes AS varchar) AS FICHA_MES, 0 AS EMP_CODI, '0X' + ccp.codiCC AS EMPCCOSTO, '0X' + area.codArn AS EMP_AREA
+                         ,'01' as 'DIA', 'HASTA MES EN CURSO' as 'DIA_DESC', 1 as CLAVE-- la clave se creara en el siguiente job, que asigna id
+                      
+
+FROM            GUARD.softland.sw_variablepersona AS vp INNER JOIN
+                         GUARD.softland.sw_variable AS v ON v.codVariable = vp.codVariable INNER JOIN
+                         GUARD.softland.sw_vsnpEstadoPer AS ep ON ep.Ficha = vp.ficha AND ep.IndiceMes = vp.mes INNER JOIN
+                         GUARD.softland.sw_cargoper AS cp ON cp.ficha = ep.Ficha AND cp.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.sw_areanegper AS area ON area.ficha = cp.ficha AND area.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.cwtcarg AS c ON c.CarCod = cp.carCod INNER JOIN
+                         GUARD.softland.sw_ccostoper AS ccp ON ccp.ficha = vp.ficha AND ccp.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.sw_vsnpRetornaFechaMesExistentes AS vfm ON vfm.IndiceMes = vp.mes INNER JOIN
+                         GUARD.softland.cwtccos AS cc ON cc.CodiCC = ccp.codiCC
+WHERE        (vp.valor IS NOT NULL) AND (v.formato = 'N') AND (vp.codVariable IN ('D067'))  and ISNUMERIC(valor)=1
+and cast(vfm.FechaMes as date)='2019-02-01'
+and CarNom ='GUARDIA SEGURIDAD PARTIME'
+
+--and ( vp.codVariable like 'H%' or vp.codVariable  IN ('P041','P052','P050','P051','P053','D064','D080','P043','P011','P212'))
+--('H994', 'P016', 'P017', 'P019', 'P022', 'P023', 'P500',  'P900', 'P980', 'P988')) 
+
+) a
+
+
+-- query dinamica parttime
+
+select cc.CENCO1_DESC,rut,nombres, sum(variable_monto) as MONTO from
+(
+
+SELECT        ccp.codiCC AS 'CENCO2_CODI', LTRIM(RTRIM(vp.ficha)) AS 'FICHA', cp.carCod as 'CARGO_CODI', c.CarNom as CARGO_DESC, cast(vfm.FechaMes AS Date) AS FECHA, vp.mes AS MES_SOFT, 
+                         vp.codVariable as 'VARIABLE_CODI', CAST(vp.valor AS float) AS 'VARIABLE_MONTO', ep.Estado as 'ESTADO_PER', v.descripcion AS 'VARIABLE_DESC', area.codArn AS AREA_CODI, 
+                         '0X'+vp.ficha + 'X' + CAST(ep.IndiceMes AS varchar) AS FICHA_MES, 0 AS EMP_CODI, '0X' + ccp.codiCC AS EMPCCOSTO, '0X' + area.codArn AS EMP_AREA
+                         ,'01' as 'DIA', 'HASTA MES EN CURSO' as 'DIA_DESC', 1 as CLAVE-- la clave se creara en el siguiente job, que asigna id
+                         ,per.nombres,per.rut
+
+FROM            GUARD.softland.sw_variablepersona AS vp INNER JOIN
+                         GUARD.softland.sw_variable AS v ON v.codVariable = vp.codVariable INNER JOIN
+                         GUARD.softland.sw_vsnpEstadoPer AS ep ON ep.Ficha = vp.ficha AND ep.IndiceMes = vp.mes INNER JOIN
+                         GUARD.softland.sw_cargoper AS cp ON cp.ficha = ep.Ficha AND cp.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.sw_areanegper AS area ON area.ficha = cp.ficha AND area.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.cwtcarg AS c ON c.CarCod = cp.carCod INNER JOIN
+                         GUARD.softland.sw_ccostoper AS ccp ON ccp.ficha = vp.ficha AND ccp.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.sw_vsnpRetornaFechaMesExistentes AS vfm ON vfm.IndiceMes = vp.mes INNER JOIN
+                         GUARD.softland.cwtccos AS cc ON cc.CodiCC = ccp.codiCC inner join
+						 GUARD.softland.sw_personal as per on ep.Ficha=per.ficha
+						 
+
+WHERE        (vp.valor IS NOT NULL) AND (v.formato = 'N') AND (vp.codVariable IN ('D066'))  and ISNUMERIC(valor)=1
+and cast(vfm.FechaMes as date)='2019-05-01'
+and  CarNom ='GUARDIA SEGURIDAD PARTIME'
+
+--and ( vp.codVariable like 'H%' or vp.codVariable  IN ('P041','P052','P050','P051','P053','D064','D080','P043','P011','P212'))
+--('H994', 'P016', 'P017', 'P019', 'P022', 'P023', 'P500',  'P900', 'P980', 'P988')) 
+
+) a
+
+left join Inteligencias.dbo.CENTROS_COSTO as cc
+on cc.CENCO2_CODI=a.CENCO2_CODI collate SQL_Latin1_General_CP1_CI_AI and cc.EMP_CODI=a.EMP_CODI
+
+group by CENCO1_DESC,rut,nombres
+
+
+
+
+--
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SELECT FECHA,cc.CENCO2_DESC, SUM(VARIABLE_MONTO) as MONTO
+  FROM [Inteligencias].[dbo].[RRHH_ESTRUCTURA_SUELDO] as estr 
+  left join Inteligencias.dbo.CENTROS_COSTO as cc 
+  on cc.CENCO2_CODI collate Modern_Spanish_CI_AS=estr.CENCO2_CODI and cc.EMP_CODI=estr.EMP_CODI
+  where VARIABLE_CODI='D067' and DIA='01'
+  
+  and YEAR(fecha)=2018 and month(fecha)=06
+  and CARGO_DESC like '%part%'
+  
+  group by FECHA ,cc.CENCO2_DESC
+  
+  
+  
+  
+  
+  
+  delete from Inteligencias.dbo.RRHH_ESTRUCTURA_SUELDO where VARIABLE_CODI='D067' and EMP_CODI=0
+
+insert into 
+Inteligencias.dbo.RRHH_ESTRUCTURA_SUELDO
+
+SELECT        ccp.codiCC AS 'CENCO2_CODI', LTRIM(RTRIM(vp.ficha)) AS 'FICHA', cp.carCod as 'CARGO_CODI', c.CarNom as CARGO_DESC, CAST(vfm.FechaMes AS Date) AS FECHA, vp.mes AS MES_SOFT, 
+                         vp.codVariable as 'VARIABLE_CODI', CAST(vp.valor AS float) AS 'VARIABLE_MONTO', ep.Estado as 'ESTADO_PER', v.descripcion AS 'VARIABLE_DESC', area.codArn AS AREA_CODI, 
+                         '0X'+vp.ficha + 'X' + CAST(ep.IndiceMes AS varchar) AS FICHA_MES, 0 AS EMP_CODI, '0X' + ccp.codiCC AS EMPCCOSTO, '0X' + area.codArn AS EMP_AREA
+                         ,'01' as 'DIA', 'HASTA MES EN CURSO' as 'DIA_DESC', 1 as CLAVE-- la clave se creara en el siguiente job, que asigna id
+                      
+
+FROM            GUARD.softland.sw_variablepersona AS vp INNER JOIN
+                         GUARD.softland.sw_variable AS v ON v.codVariable = vp.codVariable INNER JOIN
+                         GUARD.softland.sw_vsnpEstadoPer AS ep ON ep.Ficha = vp.ficha AND ep.IndiceMes = vp.mes INNER JOIN
+                         GUARD.softland.sw_cargoper AS cp ON cp.ficha = ep.Ficha AND cp.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.sw_areanegper AS area ON area.ficha = cp.ficha AND area.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.cwtcarg AS c ON c.CarCod = cp.carCod INNER JOIN
+                         GUARD.softland.sw_ccostoper AS ccp ON ccp.ficha = vp.ficha AND ccp.vigHasta = '9999-12-01' INNER JOIN
+                         GUARD.softland.sw_vsnpRetornaFechaMesExistentes AS vfm ON vfm.IndiceMes = vp.mes INNER JOIN
+                         GUARD.softland.cwtccos AS cc ON cc.CodiCC = ccp.codiCC
+WHERE        (vp.valor IS NOT NULL) AND (v.formato = 'N') AND (vp.codVariable IN ('D067'))  and ISNUMERIC(valor)=1
+--and ( vp.codVariable like 'H%' or vp.codVariable  IN ('P041','P052','P050','P051','P053','D064','D080','P043','P011','P212'))
+--('H994', 'P016', 'P017', 'P019', 'P022', 'P023', 'P500',  'P900', 'P980', 'P988')) 
+
+
+
+  DECLARE @id2 INT 
+SET @id2 = 0 
+UPDATE [Inteligencias].[dbo].[RRHH_ESTRUCTURA_SUELDO]
+SET @id2 = CLAVE = @id2 + 1 
+GO 

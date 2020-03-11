@@ -4,3 +4,6 @@ tk.pdf
 node_modules
 CotizacionesPersonal.pdf
 pdfFiles
+pdfFiles_resp
+respaldo_file_uploads
+*.pdf

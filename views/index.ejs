@@ -6,6 +6,16 @@
   </head>
   <body>
     <h1><%= title %></h1>
-    <p>Welcome to <%= title %></p>
+    <p>Seleccione Archivo para generar proceso...</p>
+
+
+    <form   action="fileupload" method="post" enctype="multipart/form-data" >
+     <input type="file" name="filetoupload" accept=".pdf"><br>
+     <input type="submit">
+     </form>
+
   </body>
 </html>
+
+
+
