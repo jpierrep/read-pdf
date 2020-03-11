@@ -17,6 +17,12 @@ var fs=require('fs');
 var formidable = require('formidable');
 var utils=require('../controllers/utils')
 
+var inProgress=0
+var ProcessTotal=0
+var ProcessActual=0
+
+
+
 
 let empresa=0
 let empresaDetalle = constants.EMPRESAS.find(x => x.ID == empresa).BD_SOFTLAND
@@ -45,17 +51,24 @@ var regex=/\d{1,2}\.\d{3}\.\d{3}[\-][0-9kK]{1}/g
 
 
 router.post('/fileupload', async function(req, res, next) {
+  
   console.log("en fileup")
   var form = new formidable.IncomingForm();
   form.parse(req, async function (err, fields, files) {
-
+ 
     var oldpath = files.filetoupload.path;
     // var newpath = 'C:/Users/jpierre/Desktop/' + files.filetoupload.name;
     var newpath =  files.filetoupload.name;
  
-  let rutsEncontrados=await getRutsOfFile(oldpath)
+  let rutsEncontrados
+  
+  try{
+    console.log("EEEEE")
+ rutsEncontrados= await getRutsOfFile(oldpath)
   console.log("ruts",rutsEncontrados)
   //solo si encuentra ruts, si no, mostrar error
+
+  
 
 
   let fechaHora=new Date().toISOString().slice(0, 19).replace('T', ' ').replace(/ /g, "-").replace(/:/g, "-");
@@ -69,21 +82,21 @@ router.post('/fileupload', async function(req, res, next) {
     //se carga el archivo actual
     fs.rename(oldpath, pdf_path, async function (err) {
       if (err) throw err;
-      await generaFiles(rutsEncontrados)
-      res.write('File uploaded and moved!');
+      //await generaFiles(rutsEncontrados)
+      generaFiles(rutsEncontrados)
+    
+      res.render('index', { title: 'Compilación Archivos Previred',errormessage: 'Proceso iniciado correctamente, se comenzarán a generar los archivos'} );
       res.end();
+    
+      //  res.write('File uploaded and moved!');
+    // res.end();
+      // next();
     });
 
 
     //res.write('File uploaded and moved!');
     //res.end();
   });
-
-
-
-
-   
-
 
 
    console.log("new",newpath)
@@ -96,7 +109,17 @@ router.post('/fileupload', async function(req, res, next) {
     });
 
     */
+
+  }catch(e){
+    console.log("no tiene formato",e)
+    res.render('index', { title: 'Compilación Archivos Previred',errormessage: 'Formato del archivo es incorrecto'} );
+    res.end();
+
+
+  }
 });
+
+ 
 
 })
 
@@ -107,13 +130,16 @@ router.post('/fileupload', async function(req, res, next) {
 
  function getRutsOfFile(pdf_path){
 
-  return new Promise(resolve=>{ 
+  return new Promise((resolve,reject)=>{ 
   
     let option=null
     pdfUtil.pdfToText(pdf_path, option, function(err, data) {
-      if (err) throw(err);
+      console.log("errr",err)
+      if (err){ reject(err)};
       //rut filtrados sin el de empresa
-     let rutsEncontrados= data.match(regex).filter(x=>!rutsFiltrar.includes(x));
+     let rutsEncontrados= data.match(regex)?data.match(regex).filter(x=>!rutsFiltrar.includes(x)):null;
+     console.log("rutsss",rutsEncontrados)
+     if(!rutsEncontrados){ reject("no hay data")};
       console.log("rutsencontrados",rutsEncontrados)
       //rutsencontrados [ '8.849.245-5', '13.510.579-1', '10.420.224-1', '8.223.485-3' ]
       //console.log(data)
@@ -147,8 +173,8 @@ router.post('/fileupload', async function(req, res, next) {
 router.get('/cargarArchivoPrevired', async function(req, res, next) {
 
 console.log("acaaaaa")
-res.render('index', { title: 'Compilación Archivos Previred'});
-
+//res.render('index', { title: 'Compilación Archivos Previred',inProgress:inProgress,progressActual:ProcessActual,processTotal:ProcessTotal});
+res.render('index', { title: 'Compilación Archivos Previred',errormessage: ''});
 
 })
 
@@ -388,6 +414,12 @@ function convierteRutID(rut) {
 
     return new Promise(async resolve=>{ 
 
+      //añadir marcador de inprogress
+     inProgress=1
+     ProcessTotal=rutsEncontrados.length
+
+
+
     var personalVigente=(await sql.query(
       `
       
@@ -501,6 +533,7 @@ function convierteRutID(rut) {
       
       distinctCC.forEach(cc=>{
           console.log("Empezando el ..."+cc)
+          ProcessActual=ProcessActual+1
       
           let pagesCC=tablaMapPersonas.filter(x=>x["CENCO2_CODI"]==cc).map(x=>x["PAGINA"]).join(" ")
           console.log("pagesCC",pagesCC)
