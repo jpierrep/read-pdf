@@ -3,14 +3,24 @@
   <head>
     <title><%= title %></title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
-    <link rel='stylesheet' href='/stylesheets/fileUpload.css' />
+   <link rel='stylesheet' href='/stylesheets/fileUpload.css' />
   </head>
   <body>
-    <h1> Hola</h1>
+    <h1> </h1>
     
 
     <div id='status' class='invisible'><%= errormessage %></div>
     <form   action="fileupload" method="post" enctype="multipart/form-data" >
+     
+      <label for="empresas">Empresa:</label>
+
+      <select id="empresas" name="empresa"> 
+        <option value="0">GUARD SERVICE S.A.</option>
+        <option value="2">GS OUTSOURCING S.A.</option>
+
+      </select>
+  
+
      <input type="file"  id="filetoupload"  name="filetoupload" onchange=" cambiar()" accept=".pdf">
      <p id="texto" >Seleccione archivo para generar proceso...</p>
      <button type="submit" id="button" disabled="disabled" >Cargar</button>

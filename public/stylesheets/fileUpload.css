@@ -42,7 +42,7 @@ body{
     transition: all .2s ease;
     outline: none;
   }
-  form button:hover{
+  form button:disabled{
     background: #149174;
       color: #0C5645;
   }
@@ -54,6 +54,12 @@ body{
     display: none;
     visibility: hidden;
        }
+
+  label{
+    margin: 15px;
+    padding: 15px;
+    color: #ffffff; 
+  }     
   
   
   
