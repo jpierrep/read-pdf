@@ -78,9 +78,9 @@ router.post('/fileupload', async function (req, res, next) {
       console.log(fechaHora)
 
 
-      //se respalda el archivo anterior
+      //se respalda el archivo anteriormente cargado, si existe.
       fs.copyFile(pdf_path, 'respaldo_file_uploads/' + fechaHora + pdf_path, function (err) {
-        if (err) throw err;
+       // if (err) throw err;
 
         //se carga el archivo actual
         fs.rename(oldpath, pdf_path, async function (err) {
@@ -92,7 +92,7 @@ router.post('/fileupload', async function (req, res, next) {
 
           if (mapPersonas.length > 0) {
 
-            generaFiles(mapPersonas, empresa)
+           await generaFiles(mapPersonas, empresa)
             res.render('index', { title: 'Compilación Archivos Previred', errormessage: 'Proceso iniciado correctamente, se comenzarán a generar los archivos' });
             res.end();
           } else {
@@ -324,7 +324,7 @@ async function generaMapPersonas(rutsEncontrados, empresa) {
 
 function generaFiles(tablaMapPersonas) {
 
-
+  return new Promise((resolveGral, reject) => {
   // console.log(tablaMapPersonas)
 
 
@@ -343,32 +343,47 @@ function generaFiles(tablaMapPersonas) {
   console.log("distinct cc", distinctCC)
 
 
-
-  distinctCC.forEach(async cc => {
+ let childs=[]
+  distinctCC.slice(0,5) .forEach(async cc => {
     console.log("Empezando el ..." + cc)
     ProcessActual = ProcessActual + 1
 
     let pagesCC = tablaMapPersonas.filter(x => x["CENCO2_CODI"] == cc).map(x => x["PAGINA"]).join(" ")
     console.log("pagesCC", pagesCC)
-
-    let child = execSync('pdftk ' + pdf_name + ' cat ' + pagesCC + ' output ' + path_output_base + cc + '.pdf',
+    
+    let child = new Promise ((resolve,reject)=>{
+      exec('pdftk ' + pdf_name + ' cat ' + pagesCC + ' output ' + path_output_base + cc + '.pdf',
       function (error, stdout, stderr) {
         console.log('stdout: ' + stdout);
         console.log('stderr: ' + stderr);
         console.log("terminado el cc " + cc)
 
+        
         if (error !== null) {
           console.log('exec error: ' + error);
 
         }
+        resolve()
+
       });
+    
+
+    })
+
+    childs.push(child)
+   
 
 
   })
+  
+  Promise.all(childs).then(()=>{
+    console.log("terminado todos los archivos")
+    resolveGral()
 
+   })
+  
+  })
 
-
-  console.log("terminado")
 
 }
 
