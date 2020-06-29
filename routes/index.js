@@ -16,24 +16,17 @@ var sql = require('../config/connections')
 var fs = require('fs');
 var formidable = require('formidable');
 var utils = require('../controllers/utils')
+let data=require('../data.json')
 
 var inProgress = 0
 var ProcessTotal = 0
 var ProcessActual = 0
-
-
-
 
 let empresa = 0
 let empresaDetalle = constants.EMPRESAS.find(x => x.ID == empresa).BD_SOFTLAND
 
 //var pdf_path = "C:\\Users\\jean\\Documents\\NodeProjects\\PDFTest.pdf";
 //var pdf_path = "holaPDF.pdf";
-
-
-
-
-
 
 //rut a no considerarse pues son de la empresa
 var rutsFiltrar = ['79.960.660-7']
@@ -48,14 +41,13 @@ var regex = /\d{1,2}\.\d{3}\.\d{3}[\-][0-9kK]{1}/g
 
 /*GET home page.*/
 
-
-
 router.post('/fileupload', async function (req, res, next) {
-
+  //se setea sin timeout el browser pasado 120 seg cierra conexion y lo vuelve a intentar
+  req.setTimeout(0);
   console.log("en fileup")
   var form = formidable({ multiples: true });
   form.parse(req, async function (err, fields, files) {
-    console.log(fields)
+    //console.log(fields)
 
     var empresa = parseInt(fields.empresa)
 
@@ -68,11 +60,8 @@ router.post('/fileupload', async function (req, res, next) {
     try {
       console.log("EEEEE")
       rutsEncontrados = await getRutsOfFile(oldpath)
-      console.log("ruts", rutsEncontrados)
+     // console.log("ruts", rutsEncontrados)
       //solo si encuentra ruts, si no, mostrar error
-
-
-
 
       let fechaHora = new Date().toISOString().slice(0, 19).replace('T', ' ').replace(/ /g, "-").replace(/:/g, "-");
       console.log(fechaHora)
@@ -93,12 +82,16 @@ router.post('/fileupload', async function (req, res, next) {
           if (mapPersonas.length > 0) {
 
            await generaFiles(mapPersonas, empresa)
-            res.render('index', { title: 'Compilación Archivos Previred', errormessage: 'Proceso iniciado correctamente, se comenzarán a generar los archivos' });
-            res.end();
+           console.log("termina genera Files")
+           // res.render('index', { title: 'Compilación Archivos Previred', errormessage: 'Proceso iniciado correctamente, se comenzarán a generar los archivos' });
+           var string = encodeURIComponent('OK');
+           res.status(200).redirect('/cargarArchivoPrevired?valid=' + string);
+         //res.status(200).send({hola:"hola"})
+         
           } else {
             res.render('index', { title: 'Compilación Archivos Previred', errormessage: 'Error empresa erronea' });
 
-            res.end();
+           
 
           }
 
@@ -131,9 +124,6 @@ router.post('/fileupload', async function (req, res, next) {
 
 
 
-
-
-
 function getRutsOfFile(pdf_path) {
 
   return new Promise((resolve, reject) => {
@@ -144,9 +134,9 @@ function getRutsOfFile(pdf_path) {
       if (err) { reject(err) };
       //rut filtrados sin el de empresa
       let rutsEncontrados = data.match(regex) ? data.match(regex).filter(x => !rutsFiltrar.includes(x)) : null;
-      console.log("rutsss", rutsEncontrados)
+      //console.log("rutsss", rutsEncontrados)
       if (!rutsEncontrados) { reject("no hay data") };
-      console.log("rutsencontrados", rutsEncontrados)
+      //console.log("rutsencontrados", rutsEncontrados)
       //rutsencontrados [ '8.849.245-5', '13.510.579-1', '10.420.224-1', '8.223.485-3' ]
       //console.log(data)
       //console.log(data); //print text    
@@ -168,17 +158,17 @@ function getRutsOfFile(pdf_path) {
 
 }
 
-
-
 router.get('/cargarArchivoPrevired/', async function (req, res, next) {
-
+  if (req.query.valid){
+      let mensaje=req.query.valid
+      if (mensaje='OK') 
+    res.render('index', { title: 'Compilación Archivos Previred', errormessage:"Proceso concluido correctamente"});
+  }else{
   console.log("acaaaaa")
   //res.render('index', { title: 'Compilación Archivos Previred',inProgress:inProgress,progressActual:ProcessActual,processTotal:ProcessTotal});
   res.render('index', { title: 'Compilación Archivos Previred', errormessage: '' });
-
+  }
 })
-
-
 
 
 
@@ -203,10 +193,6 @@ function replaceAll(string, omit, place, prevstring) {
   return replaceAll(prevstring, omit, place, string)
 }
 
-
-
-
-
 async function generaMapPersonas(rutsEncontrados, empresa) {
 
   return new Promise(async (resolve, reject) => {
@@ -215,8 +201,9 @@ async function generaMapPersonas(rutsEncontrados, empresa) {
     //añadir marcador de inprogress
     inProgress = 1
     ProcessTotal = rutsEncontrados.length
+    var personalVigente =require('../data.json')
 
-
+/*
 
     var personalVigente = (await sql.query(
       `
@@ -251,6 +238,11 @@ async function generaMapPersonas(rutsEncontrados, empresa) {
                                `
 
     )).recordset
+
+    */
+
+   // let jsonDataString=JSON.stringify(personalVigente);
+  //  fs.writeFileSync('./data.json',jsonDataString) 
 
 
     //option to extract text from page 0 to 10
@@ -321,16 +313,7 @@ async function generaMapPersonas(rutsEncontrados, empresa) {
 }
 
 
-
-function generaFiles(tablaMapPersonas) {
-
-  return new Promise((resolveGral, reject) => {
-  // console.log(tablaMapPersonas)
-
-
-  //get rut_id function
-
-
+async function generaFiles(tablaMapPersonas) {
 
   let unique = (value, index, self) => {
 
@@ -340,18 +323,15 @@ function generaFiles(tablaMapPersonas) {
   let distinctCC = ['027-001', '028-001']
   distinctCC = tablaMapPersonas.map(x => x["CENCO2_CODI"]).filter(unique);
 
-  console.log("distinct cc", distinctCC)
-
-
- let childs=[]
-  distinctCC.slice(0,5) .forEach(async cc => {
+  //limitar cantidad de archivos
+  //for (const cc of distinctCC.slice(0,5)) {
+     for (const cc of distinctCC) {
     console.log("Empezando el ..." + cc)
-    ProcessActual = ProcessActual + 1
-
+ 
     let pagesCC = tablaMapPersonas.filter(x => x["CENCO2_CODI"] == cc).map(x => x["PAGINA"]).join(" ")
     console.log("pagesCC", pagesCC)
     
-    let child = new Promise ((resolve,reject)=>{
+    let child = await  new Promise ( (resolve,reject)=>{
       exec('pdftk ' + pdf_name + ' cat ' + pagesCC + ' output ' + path_output_base + cc + '.pdf',
       function (error, stdout, stderr) {
         console.log('stdout: ' + stdout);
@@ -363,31 +343,19 @@ function generaFiles(tablaMapPersonas) {
           console.log('exec error: ' + error);
 
         }
-        resolve()
+    resolve()
 
       });
-    
 
     })
 
-    childs.push(child)
-   
-
-
-  })
+  }
+  console.log("termino todo")
   
-  Promise.all(childs).then(()=>{
-    console.log("terminado todos los archivos")
-    resolveGral()
-
-   })
-  
-  })
+ 
 
 
 }
-
-
 
 
 

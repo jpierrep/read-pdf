@@ -10,7 +10,7 @@
     
 
     <div id='status' class='invisible'><%= errormessage %></div>
-    <form   action="fileupload" method="post" enctype="multipart/form-data" >
+    <form  action="/fileupload" method="post" enctype="multipart/form-data" >
      
       <label for="empresas">Empresa:</label>
 
@@ -23,8 +23,9 @@
 
      <input type="file"  id="filetoupload"  name="filetoupload" onchange=" cambiar()" accept=".pdf">
      <p id="texto" >Seleccione archivo para generar proceso...</p>
-     <button type="submit" id="button" disabled="disabled" >Cargar</button>
-     </form>
+    <button type="submit" id="button" disabled="disabled" >Cargar</button>
+   
+    </form>
 
   </body>
 </html>
@@ -34,7 +35,7 @@
 
   function cambiar(){
     document.getElementById("texto").textContent = document.getElementById("filetoupload").files[0].name;
-    document.getElementById("button").disabled = false;  
+  document.getElementById("button").disabled = false;  
   }
   if ( document.getElementById("status").textContent!=''  ){
     alert(document.getElementById("status").textContent)
