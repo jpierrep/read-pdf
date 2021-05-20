@@ -17,7 +17,7 @@
     "express": "~4.16.0",
     "express-myconnection": "^1.0.4",
     "formidable": "^1.2.2",
-    "html-pdf": "^2.2.0",
+    "html-pdf": "^3.0.1",
     "http-errors": "~1.6.2",
     "json-stringify": "^1.0.0",
     "moment": "^2.22.2",
